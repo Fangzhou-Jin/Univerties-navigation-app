@@ -417,6 +417,10 @@
         <div class="card mb-3">
           <div class="card-body">
             <div class="row g-2 align-items-center">
+              <div class="col-sm-4 col-md-2">
+                <label class="form-label mb-1 small text-muted">University</label>
+                <select id="universitySelect" class="form-select form-select-sm"></select>
+              </div>
               <div class="col-sm-4 col-md-3">
                 <label class="form-label mb-1 small text-muted">Building</label>
                 <select id="buildingSelect" class="form-select form-select-sm"></select>
@@ -425,7 +429,7 @@
                 <label class="form-label mb-1 small text-muted">Floor</label>
                 <select id="floorSelect" class="form-select form-select-sm"></select>
               </div>
-              <div class="col-sm-5 col-md-5 mt-2 mt-sm-0">
+              <div class="col-sm-5 col-md-3 mt-2 mt-sm-0">
                 <label class="form-label mb-1 small text-muted">Search</label>
                 <div class="input-group input-group-sm">
                   <input id="searchInput" type="text" class="form-control" placeholder="Room or type (e.g., A101, lecture)…">
@@ -538,7 +542,10 @@
   const STORAGE_FAVES = 'una-favorites';
 
   const DATA = {
-    buildings: [
+    universities: [
+      {
+        id: 'MIT', name: 'Massachusetts Institute of Technology',
+        buildings: [
       {
         id: 'A', name: 'Main Building A',
         amenities: { elevators: 3, accessibleRestrooms: 4, ramps: 2, stairs: 6 },
@@ -599,6 +606,27 @@
         ]
       }
     ]
+      },
+      {
+        id: 'Harvard', name: 'Harvard University',
+        buildings: [
+          {
+            id: 'H1', name: 'Harvard Hall',
+            amenities: { elevators: 2, accessibleRestrooms: 3, ramps: 1, stairs: 4 },
+            floors: [
+              {
+                level: 0, label:'Ground', plan: {w:1000,h:560},
+                rooms: [
+                  { id:'H001', name:'Reception', type:'service', x:30, y:30, w:160, h:90, free:true },
+                  { id:'H010', name:'Library', type:'admin', x:210,y:30,w:300,h:160, free:false },
+                  { id:'H020', name:'Lecture Hall', type:'lecture', x:30,y:140,w:400,h:200, free:true },
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
   };
 
   const TYPE_COLOR = {
@@ -611,6 +639,7 @@
   const qs = s => document.querySelector(s);
   const qsa = s => [...document.querySelectorAll(s)];
 
+  const universitySelect = qs('#universitySelect');
   const buildingSelect = qs('#buildingSelect');
   const floorSelect = qs('#floorSelect');
   const roomGrid = qs('#roomGrid');
@@ -622,7 +651,7 @@
   const liveRegion = qs('#liveRegion');
   const darkToggleBtn = qs('#darkToggleBtn');
 
-  let current = { buildingIdx: 0, floorIdx: 0, filter: 'all', query: '' };
+  let current = { universityIdx: 0, buildingIdx: 0, floorIdx: 0, filter: 'all', query: '' };
   let favorites = new Set();
 
   // Restore dark mode
@@ -653,20 +682,29 @@
   }
 
   function getCurrentContext() {
-    const b = DATA.buildings[current.buildingIdx];
+    const u = DATA.universities[current.universityIdx];
+    const b = u.buildings[current.buildingIdx];
     const f = b.floors[current.floorIdx];
-    return { b, f };
+    return { u, b, f };
   }
 
   // Populate selects
+  function populateUniversitySelect() {
+    universitySelect.innerHTML = DATA.universities
+      .map((u, i) => `<option value="${i}">${u.name}</option>`)
+      .join('');
+  }
+
   function populateBuildingSelect() {
-    buildingSelect.innerHTML = DATA.buildings
+    const u = DATA.universities[current.universityIdx];
+    buildingSelect.innerHTML = u.buildings
       .map((b, i) => `<option value="${i}">${b.name}</option>`)
       .join('');
   }
 
   function populateFloorSelect() {
-    const b = DATA.buildings[current.buildingIdx];
+    const u = DATA.universities[current.universityIdx];
+    const b = u.buildings[current.buildingIdx];
     floorSelect.innerHTML = b.floors
       .map((f, i) => `<option value="${i}">${f.label}</option>`)
       .join('');
@@ -813,20 +851,33 @@
   }
 
   // Interactions
+  universitySelect.addEventListener('change', e => {
+    current.universityIdx = +e.target.value;
+    current.buildingIdx = 0;
+    current.floorIdx = 0;
+    populateBuildingSelect();
+    buildingSelect.value = 0;
+    populateFloorSelect();
+    floorSelect.value = 0;
+    renderAll();
+    const { u, b, f } = getCurrentContext();
+    if (liveRegion) liveRegion.textContent = `Switched to ${u.name}, ${b.name}, ${f.label}.`;
+  });
+
   buildingSelect.addEventListener('change', e => {
     current.buildingIdx = +e.target.value;
     current.floorIdx = 0;
     populateFloorSelect();
     floorSelect.value = 0;
     renderAll();
-    const { b, f } = getCurrentContext();
+    const { u, b, f } = getCurrentContext();
     if (liveRegion) liveRegion.textContent = `Switched to ${b.name}, ${f.label}.`;
   });
 
   floorSelect.addEventListener('change', e => {
     current.floorIdx = +e.target.value;
     renderAll();
-    const { b, f } = getCurrentContext();
+    const { u, b, f } = getCurrentContext();
     if (liveRegion) liveRegion.textContent = `Switched to ${b.name}, ${f.label}.`;
   });
 
@@ -928,6 +979,7 @@
   }
 
   // Initial bootstrap
+  populateUniversitySelect();
   populateBuildingSelect();
   populateFloorSelect();
   renderAll();
