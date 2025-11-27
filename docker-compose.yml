@@ -1,0 +1,89 @@
+# Docker Compose 配置（开发环境）
+# 使用方式: docker-compose up -d
+
+services:
+  # Laravel 应用（开发模式）
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: una_navigator_app
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+      - "5173:5173"  # Vite 热更新端口
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - APP_KEY=${APP_KEY}
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_DATABASE=${DB_DATABASE:-sdp_db}
+      - DB_USERNAME=${DB_USERNAME:-root}
+      - DB_PASSWORD=${DB_PASSWORD:-secret}
+    depends_on:
+      - db
+      - redis
+    networks:
+      - una_network
+
+  # MySQL 数据库
+  db:
+    image: mysql:8.0
+    container_name: una_navigator_db
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-sdp_db}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-secret}
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - una_network
+
+  # Redis
+  redis:
+    image: redis:alpine
+    container_name: una_navigator_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - una_network
+
+  # phpMyAdmin
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: una_navigator_phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-secret}
+    depends_on:
+      - db
+    networks:
+      - una_network
+
+  # Mailhog (用于开发环境测试邮件)
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: una_navigator_mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"  # SMTP 端口
+      - "8025:8025"  # Web UI 端口
+    networks:
+      - una_network
+
+networks:
+  una_network:
+    driver: bridge
+
+volumes:
+  db_data:
+    driver: local
+
