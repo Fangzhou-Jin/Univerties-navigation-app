@@ -380,7 +380,7 @@
               <span class="ms-1"><i class="fa-solid fa-caret-down"></i></span>
             </button>
 
-            <!-- PROFILE DROPDOWN WITH TABS -->
+            <!-- PROFILE DROPDOWN -->
             <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="profileMenuButton">
     <!-- Header with user info -->
     <li class="dropdown-header small">
@@ -541,92 +541,12 @@
   const STORAGE_DARK = 'una-dark';
   const STORAGE_FAVES = 'una-favorites';
 
-  const DATA = {
-    universities: [
-      {
-        id: 'MIT', name: 'Massachusetts Institute of Technology',
-        buildings: [
-      {
-        id: 'A', name: 'Main Building A',
-        amenities: { elevators: 3, accessibleRestrooms: 4, ramps: 2, stairs: 6 },
-        floors: [
-          {
-            level: 0, label:'Ground', plan: {w:1000,h:560},
-            rooms: [
-              { id:'A001', name:'Info Desk', type:'service', x:30, y:30, w:160, h:90, free:true },
-              { id:'A005', name:'Café', type:'service', x:210,y:30,w:200,h:120, free:false },
-              { id:'A010', name:'Admin Office', type:'admin', x:30,y:140,w:160,h:90, free:true },
-              { id:'A020', name:'Auditorium', type:'lecture', x:450,y:40,w:480,h:200, free:false },
-              { id:'A030', name:'Comp Lab Intro', type:'lab', x:30,y:260,w:260,h:130, free:true },
-              { id:'A040', name:'Makerspace', type:'lab', x:310,y:260,w:240,h:130, free:false },
-            ]
-          },
-          {
-            level: 1, label:'Floor 1', plan:{w:1000,h:560},
-            rooms: [
-              { id:'A101', name:'Lecture Hall 1', type:'lecture', x:30,y:40,w:300,h:160, free:true },
-              { id:'A102', name:'Seminar Rm', type:'lecture', x:350,y:40,w:260,h:140, free:false },
-              { id:'A111', name:'Admin Services', type:'admin', x:30,y:220,w:220,h:120, free:true },
-              { id:'A121', name:'Networks Lab', type:'lab', x:270,y:220,w:250,h:140, free:false },
-              { id:'A131', name:'AI Lab', type:'lab', x:540,y:220,w:260,h:140, free:true },
-            ]
-          },
-          {
-            level: 2, label:'Floor 2', plan:{w:1000,h:560},
-            rooms: [
-              { id:'A201', name:'Lecture Hall 2', type:'lecture', x:30,y:40,w:280,h:160, free:false },
-              { id:'A212', name:'UX Studio', type:'lab', x:330,y:40,w:220,h:140, free:true },
-              { id:'A231', name:'Dean Office', type:'admin', x:30,y:220,w:220,h:120, free:false },
-              { id:'A241', name:'Project Lab', type:'lab', x:270,y:220,w:250,h:140, free:true },
-            ]
-          }
-        ]
-      },
-      {
-        id:'B', name:'Science Wing B',
-        amenities:{ elevators:2, accessibleRestrooms:2, ramps:1, stairs:4 },
-        floors:[
-          {
-            level:0, label:'Ground', plan:{w:1000,h:560},
-            rooms:[
-              { id:'B001', name:'Help Desk', type:'service', x:30,y:30,w:140,h:90, free:true },
-              { id:'B010', name:'Chem Lab', type:'lab', x:180,y:30,w:300,h:160, free:false },
-              { id:'B020', name:'Physics Lab', type:'lab', x:500,y:30,w:300,h:160, free:true },
-              { id:'B030', name:'Lecture Room', type:'lecture', x:30,y:220,w:340,h:160, free:false },
-            ]
-          },
-          {
-            level:1, label:'Floor 1', plan:{w:1000,h:560},
-            rooms:[
-              { id:'B101', name:'Bio Lab', type:'lab', x:30,y:40,w:300,h:160, free:true },
-              { id:'B115', name:'Admin Office', type:'admin', x:350,y:40,w:220,h:120, free:true },
-              { id:'B131', name:'Lecture 1.31', type:'lecture', x:30,y:220,w:260,h:140, free:true },
-            ]
-          }
-        ]
-      }
-    ]
-      },
-      {
-        id: 'Harvard', name: 'Harvard University',
-        buildings: [
-          {
-            id: 'H1', name: 'Harvard Hall',
-            amenities: { elevators: 2, accessibleRestrooms: 3, ramps: 1, stairs: 4 },
-            floors: [
-              {
-                level: 0, label:'Ground', plan: {w:1000,h:560},
-                rooms: [
-                  { id:'H001', name:'Reception', type:'service', x:30, y:30, w:160, h:90, free:true },
-                  { id:'H010', name:'Library', type:'admin', x:210,y:30,w:300,h:160, free:false },
-                  { id:'H020', name:'Lecture Hall', type:'lecture', x:30,y:140,w:400,h:200, free:true },
-                ]
-              }
-            ]
-          }
-        ]
-      }
-    ]
+  // Dynamic data from backend
+  let DATA = {
+    universities: [],
+    buildings: [],
+    floors: [],
+    rooms: []
   };
 
   const TYPE_COLOR = {
@@ -651,8 +571,72 @@
   const liveRegion = qs('#liveRegion');
   const darkToggleBtn = qs('#darkToggleBtn');
 
-  let current = { universityIdx: 0, buildingIdx: 0, floorIdx: 0, filter: 'all', query: '' };
+  let current = { 
+    universityId: null, 
+    buildingId: null, 
+    floorNumber: null, 
+    filter: 'all', 
+    query: '' 
+  };
   let favorites = new Set();
+
+  // API Functions
+  async function fetchUniversities() {
+    try {
+      const response = await fetch('/api/public/universities');
+      const data = await response.json();
+      DATA.universities = data;
+      return data;
+    } catch (error) {
+      console.error('Error fetching universities:', error);
+      return [];
+    }
+  }
+
+  async function fetchBuildingsByUniversity(universityId) {
+    try {
+      const response = await fetch(`/api/public/buildings/university/${universityId}`);
+      const data = await response.json();
+      DATA.buildings = data;
+      return data;
+    } catch (error) {
+      console.error('Error fetching buildings:', error);
+      return [];
+    }
+  }
+
+  async function fetchFloorsByBuilding(buildingId) {
+    try {
+      const response = await fetch(`/api/public/buildings/${buildingId}/floors`);
+      const data = await response.json();
+      DATA.floors = data;
+      return data;
+    } catch (error) {
+      console.error('Error fetching floors:', error);
+      return [];
+    }
+  }
+
+  async function fetchRooms(filters = {}) {
+    try {
+      const params = new URLSearchParams();
+      
+      if (filters.university_id) params.append('university_id', filters.university_id);
+      if (filters.building_id) params.append('building_id', filters.building_id);
+      if (filters.floor_number !== null && filters.floor_number !== undefined) {
+        params.append('floor_number', filters.floor_number);
+      }
+      if (filters.search_query) params.append('search_query', filters.search_query);
+      
+      const response = await fetch(`/api/public/rooms/search?${params.toString()}`);
+      const data = await response.json();
+      DATA.rooms = data;
+      return data;
+    } catch (error) {
+      console.error('Error fetching rooms:', error);
+      return [];
+    }
+  }
 
   // Restore dark mode
   (function restoreDark() {
@@ -682,60 +666,130 @@
   }
 
   function getCurrentContext() {
-    const u = DATA.universities[current.universityIdx];
-    const b = u.buildings[current.buildingIdx];
-    const f = b.floors[current.floorIdx];
-    return { u, b, f };
+    const currentUniversity = DATA.universities.find(u => u.id_university_una == current.universityId);
+    const currentBuilding = DATA.buildings.find(b => b.id_building_una == current.buildingId);
+    const currentFloor = DATA.floors.find(f => f.floor_number == current.floorNumber);
+    
+    return { 
+      university: currentUniversity, 
+      building: currentBuilding, 
+      floor: currentFloor,
+      rooms: DATA.rooms 
+    };
   }
 
   // Populate selects
-  function populateUniversitySelect() {
-    universitySelect.innerHTML = DATA.universities
-      .map((u, i) => `<option value="${i}">${u.name}</option>`)
-      .join('');
+  async function populateUniversitySelect() {
+    const universities = await fetchUniversities();
+    universitySelect.innerHTML = '<option value="">选择大学...</option>' + 
+      universities.map(u => `<option value="${u.id_university_una}">${u.university_name_una}</option>`).join('');
+    
+    // Auto-select first university if available
+    if (universities.length > 0) {
+      current.universityId = universities[0].id_university_una;
+      universitySelect.value = current.universityId;
+      await populateBuildingSelect();
+    }
   }
 
-  function populateBuildingSelect() {
-    const u = DATA.universities[current.universityIdx];
-    buildingSelect.innerHTML = u.buildings
-      .map((b, i) => `<option value="${i}">${b.name}</option>`)
-      .join('');
+  async function populateBuildingSelect() {
+    if (!current.universityId) {
+      buildingSelect.innerHTML = '<option value="">请先选择大学</option>';
+      return;
+    }
+    
+    const buildings = await fetchBuildingsByUniversity(current.universityId);
+    buildingSelect.innerHTML = '<option value="">选择建筑...</option>' + 
+      buildings.map(b => `<option value="${b.id_building_una}">${b.building_name_una || b.building_code_una}</option>`).join('');
+    
+    // Auto-select first building if available
+    if (buildings.length > 0) {
+      current.buildingId = buildings[0].id_building_una;
+      buildingSelect.value = current.buildingId;
+      await populateFloorSelect();
+    }
   }
 
-  function populateFloorSelect() {
-    const u = DATA.universities[current.universityIdx];
-    const b = u.buildings[current.buildingIdx];
-    floorSelect.innerHTML = b.floors
-      .map((f, i) => `<option value="${i}">${f.label}</option>`)
-      .join('');
+  async function populateFloorSelect() {
+    if (!current.buildingId) {
+      floorSelect.innerHTML = '<option value="">请先选择建筑</option>';
+      return;
+    }
+    
+    const floors = await fetchFloorsByBuilding(current.buildingId);
+    floorSelect.innerHTML = '<option value="">选择楼层...</option>' + 
+      floors.map(f => `<option value="${f.floor_number}">${f.floor_label}</option>`).join('');
+    
+    // Auto-select first floor if available
+    if (floors.length > 0) {
+      current.floorNumber = floors[0].floor_number;
+      floorSelect.value = current.floorNumber;
+      await renderAll();
+    }
   }
 
   // Rendering
-  function renderAll() {
+  async function renderAll() {
+    // Fetch rooms with current filters
+    await fetchRooms({
+      university_id: current.universityId,
+      building_id: current.buildingId,
+      floor_number: current.floorNumber,
+      search_query: current.query
+    });
+    
     renderMap();
     renderRooms();
     renderAccessibility();
   }
 
+  function getRoomType(roomTypeId) {
+    // Map room type IDs to type names
+    // You may need to adjust these based on your actual room_types_una table
+    const typeMap = {
+      1: 'lecture',
+      2: 'lab',
+      3: 'admin',
+      4: 'service'
+    };
+    return typeMap[roomTypeId] || 'service';
+  }
+
+  function isRoomFree(availabilityId) {
+    // Map availability IDs to free status
+    // You may need to adjust these based on your actual availability_una table
+    // Assuming 1 = Free, 2 = Occupied
+    return availabilityId === 1;
+  }
+
   function filteredRooms(rooms) {
     const q = (current.query || '').trim().toLowerCase();
     return rooms.filter(r => {
-      const qMatch = !q || [r.id, r.name, r.type].join(' ').toLowerCase().includes(q);
+      const roomType = getRoomType(r.id_room_type_una);
+      const isFree = isRoomFree(r.id_availability_una);
+      const roomId = r.room_number_una || '';
+      const roomName = r.room_name_una || '';
+      
+      const qMatch = !q || [roomId, roomName, roomType].join(' ').toLowerCase().includes(q);
       const typeMatch =
         (current.filter === 'all') ||
-        (current.filter === 'free' ? r.free :
-          current.filter === 'favorites' ? favorites.has(r.id) :
-          r.type === current.filter);
+        (current.filter === 'free' ? isFree :
+          current.filter === 'favorites' ? favorites.has(roomId) :
+          roomType === current.filter);
       return qMatch && typeMatch;
     });
   }
 
   function renderMap() {
-    const { b, f } = getCurrentContext();
-    const rooms = filteredRooms(f.rooms);
+    const { building, floor, rooms } = getCurrentContext();
+    const displayRooms = filteredRooms(rooms);
 
-    mapTitle.textContent = b.name;
-    floorMeta.textContent = f.label;
+    if (building) {
+      mapTitle.textContent = building.building_name_una || building.building_code_una || '—';
+    }
+    if (floor) {
+      floorMeta.textContent = floor.floor_label || '—';
+    }
 
     const BOX_W = 260;
     const BOX_H = 140;
@@ -743,8 +797,8 @@
     const PADDING = 40;
     const MAX_COLS = 3;
 
-    const colsUsed = Math.min(MAX_COLS, Math.max(rooms.length, 1));
-    const rows = Math.max(1, Math.ceil(rooms.length / colsUsed));
+    const colsUsed = Math.min(MAX_COLS, Math.max(displayRooms.length, 1));
+    const rows = Math.max(1, Math.ceil(displayRooms.length / colsUsed));
 
     const totalW = PADDING * 2 + colsUsed * BOX_W + (colsUsed - 1) * GAP;
     const totalH = PADDING * 2 + rows * BOX_H + (rows - 1) * GAP;
@@ -759,137 +813,168 @@
       <rect x="0" y="0" width="${totalW}" height="${totalH}" fill="transparent"/>
     `;
 
-    rooms.forEach((r, idx) => {
+    displayRooms.forEach((r, idx) => {
       const col = idx % colsUsed;
       const row = Math.floor(idx / colsUsed);
 
       const x = PADDING + col * (BOX_W + GAP);
       const y = PADDING + row * (BOX_H + GAP);
 
+      const roomType = getRoomType(r.id_room_type_una);
+      const isFree = isRoomFree(r.id_availability_una);
+      const roomId = r.room_number_una || '';
+      const roomName = r.room_name_una || 'Unnamed';
+
       const g = document.createElementNS('http://www.w3.org/2000/svg','g');
       g.setAttribute('filter','url(#shadow)');
       g.innerHTML = `
         <rect x="${x}" y="${y}" rx="8" ry="8"
               width="${BOX_W}" height="${BOX_H}"
-              fill="${TYPE_COLOR[r.type] || '#e2e8f0'}"
+              fill="${TYPE_COLOR[roomType] || '#e2e8f0'}"
               stroke="#0f172a" stroke-width="1"
-              opacity="${(current.filter==='free' && !r.free) ? 0.25 : 1}"
-              class="room-rect" data-id="${r.id}"/>
-        <text x="${x+10}" y="${y+26}" font-size="16" font-weight="800" fill="#111827">${r.id}</text>
-        <text x="${x+10}" y="${y+46}" font-size="13" fill="#334155">${r.name}</text>
-        <text x="${x+10}" y="${y+BOX_H-12}" font-size="12" fill="${r.free?'#1f8b4c':'#b42323'}">
-          ${r.free ? 'Free' : 'Occupied'}
+              opacity="${(current.filter==='free' && !isFree) ? 0.25 : 1}"
+              class="room-rect" data-id="${roomId}"/>
+        <text x="${x+10}" y="${y+26}" font-size="16" font-weight="800" fill="#111827">${roomId}</text>
+        <text x="${x+10}" y="${y+46}" font-size="13" fill="#334155">${roomName}</text>
+        <text x="${x+10}" y="${y+BOX_H-12}" font-size="12" fill="${isFree?'#1f8b4c':'#b42323'}">
+          ${isFree ? 'Free' : 'Occupied'}
         </text>
       `;
       g.style.cursor = 'pointer';
-      g.addEventListener('click', () => openRoomPage(r.id));
+      g.addEventListener('click', () => openRoomPage(roomId));
       mapSvg.appendChild(g);
     });
   }
 
   function renderRooms() {
-    const { b, f } = getCurrentContext();
-    const rooms = filteredRooms(f.rooms);
-    const count = rooms.length;
+    const { building, floor, rooms } = getCurrentContext();
+    const displayRooms = filteredRooms(rooms);
+    const count = displayRooms.length;
+
+    const buildingName = building ? (building.building_name_una || building.building_code_una) : '—';
+    const floorLabel = floor ? floor.floor_label : '—';
 
     if (count) {
-      roomSummary.textContent = `${count} room${count !== 1 ? 's' : ''} found in ${b.name} — ${f.label}.`;
+      roomSummary.textContent = `${count} room${count !== 1 ? 's' : ''} found in ${buildingName} — ${floorLabel}.`;
     } else {
-      roomSummary.textContent = `No rooms found in ${b.name} — ${f.label} for the current filters.`;
+      roomSummary.textContent = `No rooms found in ${buildingName} — ${floorLabel} for the current filters.`;
       roomGrid.innerHTML = `<p class="text-muted">Try clearing search, changing room type filter, or switching building/floor.</p>`;
       return;
     }
 
-    roomGrid.innerHTML = rooms.map(r => `
+    roomGrid.innerHTML = displayRooms.map(r => {
+      const roomType = getRoomType(r.id_room_type_una);
+      const isFree = isRoomFree(r.id_availability_una);
+      const roomId = r.room_number_una || '';
+      const roomName = r.room_name_una || 'Unnamed';
+      
+      return `
       <div class="col-md-4">
         <div class="card room-card h-100">
           <div class="card-body d-flex flex-column">
             <div class="d-flex justify-content-between align-items-start mb-1">
-              <span class="room-id-badge">${r.id}</span>
-              ${favorites.has(r.id) ? '<span class="room-tag"><i class="fa-solid fa-star me-1"></i>Favorite</span>' : ''}
+              <span class="room-id-badge">${roomId}</span>
+              ${favorites.has(roomId) ? '<span class="room-tag"><i class="fa-solid fa-star me-1"></i>Favorite</span>' : ''}
             </div>
-            <h6 class="mb-1 fw-bold">${r.name}</h6>
+            <h6 class="mb-1 fw-bold">${roomName}</h6>
             <div class="text-muted small mb-2">
-              <i class="fa-regular fa-building me-1"></i>${b.name} · ${f.label}
+              <i class="fa-regular fa-building me-1"></i>${buildingName} · ${floorLabel}
             </div>
             <div class="mb-2 d-flex flex-wrap gap-1">
-              <span class="room-tag"><i class="fa-solid fa-tag me-1"></i>${r.type}</span>
-              ${r.free ? '<span class="room-tag"><i class="fa-solid fa-circle-check me-1"></i>Free now</span>' : ''}
+              <span class="room-tag"><i class="fa-solid fa-tag me-1"></i>${roomType}</span>
+              ${isFree ? '<span class="room-tag"><i class="fa-solid fa-circle-check me-1"></i>Free now</span>' : ''}
             </div>
-            <div class="mb-3 small ${r.free ? 'status-ok' : 'status-busy'}">
-              ${r.free ? 'Available' : 'Occupied'}
+            <div class="mb-3 small ${isFree ? 'status-ok' : 'status-busy'}">
+              ${isFree ? 'Available' : 'Occupied'}
             </div>
             <div class="mt-auto d-flex flex-wrap gap-2">
-              <button class="btn btn-sm btn-outline-primary" type="button" onclick="zoomTo('${r.id}')">
+              <button class="btn btn-sm btn-outline-primary" type="button" onclick="zoomTo('${roomId}')">
                 <i class="fa-solid fa-magnifying-glass me-1"></i>Locate
               </button>
               <a class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener"
-                 href="https://maps.google.com/?q=${encodeURIComponent(b.name)}">
+                 href="https://maps.google.com/?q=${encodeURIComponent(buildingName)}">
                  <i class="fa-solid fa-route me-1"></i>Directions
               </a>
-              <button class="btn btn-sm btn-outline-success" type="button" onclick="openRoomPage('${r.id}')">
+              <button class="btn btn-sm btn-outline-success" type="button" onclick="openRoomPage('${roomId}')">
                 <i class="fa-solid fa-door-open me-1"></i>Room data
               </button>
-              <button class="btn btn-sm btn-outline-warning fav-btn ${favorites.has(r.id)?'fav-active':''}"
+              <button class="btn btn-sm btn-outline-warning fav-btn ${favorites.has(roomId)?'fav-active':''}"
                 type="button"
-                onclick="toggleFavorite('${r.id}')"
-                aria-label="Toggle favorite for ${r.id} ${r.name}">
+                onclick="toggleFavorite('${roomId}')"
+                aria-label="Toggle favorite for ${roomId} ${roomName}">
                 <i class="fa-solid fa-star"></i>
               </button>
             </div>
           </div>
         </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
   }
 
   function renderAccessibility() {
-    const { b } = getCurrentContext();
-    qs('#elevatorInfo').textContent = `${b.amenities.elevators} elevators across main cores.`;
-    qs('#stairsInfo').textContent = `${b.amenities.stairs} staircases; ${b.amenities.ramps} ramps at entries.`;
-    qs('#restroomInfo').textContent = `${b.amenities.accessibleRestrooms} accessible restrooms near elevator lobbies.`;
+    const { building } = getCurrentContext();
+    
+    if (building && building.amenities) {
+      qs('#elevatorInfo').textContent = `${building.amenities.elevators || 0} elevators across main cores.`;
+      qs('#stairsInfo').textContent = `${building.amenities.stairs || 0} staircases; ${building.amenities.ramps || 0} ramps at entries.`;
+      qs('#restroomInfo').textContent = `${building.amenities.accessibleRestrooms || 0} accessible restrooms near elevator lobbies.`;
+    } else {
+      // Default values when no building data available
+      qs('#elevatorInfo').textContent = 'Information not available';
+      qs('#stairsInfo').textContent = 'Information not available';
+      qs('#restroomInfo').textContent = 'Information not available';
+    }
   }
 
   // Interactions
-  universitySelect.addEventListener('change', e => {
-    current.universityIdx = +e.target.value;
-    current.buildingIdx = 0;
-    current.floorIdx = 0;
-    populateBuildingSelect();
-    buildingSelect.value = 0;
-    populateFloorSelect();
-    floorSelect.value = 0;
-    renderAll();
-    const { u, b, f } = getCurrentContext();
-    if (liveRegion) liveRegion.textContent = `Switched to ${u.name}, ${b.name}, ${f.label}.`;
+  universitySelect.addEventListener('change', async (e) => {
+    current.universityId = e.target.value || null;
+    current.buildingId = null;
+    current.floorNumber = null;
+    
+    if (current.universityId) {
+      await populateBuildingSelect();
+    } else {
+      buildingSelect.innerHTML = '<option value="">请先选择大学</option>';
+      floorSelect.innerHTML = '<option value="">请先选择建筑</option>';
+      DATA.rooms = [];
+      renderAll();
+    }
   });
 
-  buildingSelect.addEventListener('change', e => {
-    current.buildingIdx = +e.target.value;
-    current.floorIdx = 0;
-    populateFloorSelect();
-    floorSelect.value = 0;
-    renderAll();
-    const { u, b, f } = getCurrentContext();
-    if (liveRegion) liveRegion.textContent = `Switched to ${b.name}, ${f.label}.`;
+  buildingSelect.addEventListener('change', async (e) => {
+    current.buildingId = e.target.value || null;
+    current.floorNumber = null;
+    
+    if (current.buildingId) {
+      await populateFloorSelect();
+    } else {
+      floorSelect.innerHTML = '<option value="">请先选择建筑</option>';
+      DATA.rooms = [];
+      renderAll();
+    }
   });
 
-  floorSelect.addEventListener('change', e => {
-    current.floorIdx = +e.target.value;
-    renderAll();
-    const { u, b, f } = getCurrentContext();
-    if (liveRegion) liveRegion.textContent = `Switched to ${b.name}, ${f.label}.`;
+  floorSelect.addEventListener('change', async (e) => {
+    current.floorNumber = e.target.value || null;
+    await renderAll();
+    
+    const { building, floor } = getCurrentContext();
+    if (liveRegion && building && floor) {
+      liveRegion.textContent = `Switched to ${building.building_name_una}, ${floor.floor_label}.`;
+    }
   });
 
-  searchInput.addEventListener('input', e => {
+  searchInput.addEventListener('input', async (e) => {
     current.query = e.target.value;
-    renderAll();
+    await renderAll();
   });
 
-  qs('#clearSearch').addEventListener('click', () => {
+  qs('#clearSearch').addEventListener('click', async () => {
     current.query = '';
     searchInput.value = '';
-    renderAll();
+    await renderAll();
   });
 
   // Filters (sidebar)
@@ -901,9 +986,9 @@
   }
 
   qsa('#RoomsFilters [data-filter]').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       current.filter = btn.dataset.filter;
-      renderAll();
+      await renderAll();
       updateFilterButtons();
     });
   });
@@ -943,47 +1028,18 @@
     localStorage.setItem(STORAGE_DARK, document.body.classList.contains('dark-mode') ? '1' : '0');
   });
 
-  // ===== Profile dropdown tab logic + demo handlers =====
-  const profileTabButtons = document.querySelectorAll('[data-profile-tab]');
-  const profileTabProfile = document.getElementById('profileTab-profile');
-  const profileTabSettings = document.getElementById('profileTab-settings');
-
-  profileTabButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const target = btn.getAttribute('data-profile-tab');
-
-      profileTabButtons.forEach(b => b.classList.toggle('active', b === btn));
-
-      if (target === 'profile') {
-        profileTabProfile.classList.remove('d-none');
-        profileTabSettings.classList.add('d-none');
-      } else {
-        profileTabSettings.classList.remove('d-none');
-        profileTabProfile.classList.add('d-none');
-      }
-    });
-  });
-
-  function handleEditProfile() {
-    alert('Edit profile (demo). Connect this to your backend later.');
-  }
-
-  function handleAccountSave() {
-    alert('Account settings saved (demo). Connect this to your backend later.');
-  }
-
-  function handleDeleteAccount() {
-    if (confirm('Are you sure you want to delete your account?')) {
-      alert('Account deletion (demo). Connect this to your backend later.');
-    }
-  }
-
   // Initial bootstrap
-  populateUniversitySelect();
-  populateBuildingSelect();
-  populateFloorSelect();
-  renderAll();
-  updateFilterButtons();
+  async function initializeApp() {
+    await populateUniversitySelect();
+    updateFilterButtons();
+  }
+
+  // Start the app when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeApp);
+  } else {
+    initializeApp();
+  }
 </script>
 </body>
 </html>
