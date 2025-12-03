@@ -1,0 +1,42 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Composer
+/vendor
+
+# Node
+node_modules
+npm-debug.log
+
+# Laravel
+.env
+.env.backup
+.env.production
+storage/*.key
+.phpunit.result.cache
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Tests
+tests/
+phpunit.xml
+
+# Documentation
+*.md
+!README.md
+
+# Logs
+storage/logs/*
+!storage/logs/.gitignore
+
